@@ -74,7 +74,7 @@ int main(void)
     double a = 1;
     double b = 1;
 
-    double x_square[N];
+    double xsquare[N];
     for(int i=0;i<N;i++){
         xsquare[i] = x[i]*x[i];
     }
