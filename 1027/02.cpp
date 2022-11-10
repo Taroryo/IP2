@@ -1,88 +1,91 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-struct Point2D
+void draw_graph(const double x[], const double y[], const int N, const double a, const double b)
+//
+//  gnuplot を呼び出して，散布図(x,y) および 直線 y=ax+b を描画する関数
+//
 {
-    double x;
-    double y;
-};
-const int N = 5;
-double spline(const Point2D pnt[], const double x)
-{
-	int idx = -1, k;
-	double h[N-1], b[N-1], d[N-1], g[N-1], u[N-1], r[N];
+    // 【注意】このプログラムを動かすには https://sourceforge.net/projects/gnuplot/ 等からgnuplotをインストールする必要がある
+    //  gnuplot の実行ファイルのフルパス．教室PCの場合は次の通り
+    const char gp_cmd[] = "\"C:/Program Files/gnuplot/bin/gnuplot\" -persist";
 
-	int i;
-	for (i=1; i<N-1 && idx<0; i++) {
-		if (x < pnt[i].x )
-			idx = i - 1;
-	}
-	
-	if (idx < 0)
-		idx = N-2;
-	
-	for(i=0; i<N-1; i++) {
-		h[i] = pnt[i+1].x - pnt[i].x;
-	}
+    FILE *fp;
+    fp = _popen(gp_cmd, "w");
+    if(fp == NULL) {
+        printf("popen() error");
+        exit(1);
+    }
 
-	for (i=1; i<N-1; i++) {
-		b[i] = 2.0 * (h[i] + h[i-1]);
-		d[i] = 3.0 * ((pnt[i+1].y - pnt[i  ].y) / h[i  ] 
-					- (pnt[i  ].y - pnt[i-1].y) / h[i-1]);
-	}
+    fprintf(fp, "set title 'Spring rate measurement and least square fitting'\n");
+    fprintf(fp, "set xrange [0 : 10.0]\n");
+    fprintf(fp, "set yrange [0 : 20.0]\n");
+    fprintf(fp, "set xlabel '{/Arial:Italic x}[mm]'\n");
+    fprintf(fp, "set ylabel '{/Arial:Italic y}[N]'\n");
 
-	g[1] = h[1] / b[1];
+    // フォントの変更
+    fprintf(fp, "set title font 'Arial, 16'\n");
+    fprintf(fp, "set xlabel font 'Arial,16'\n"); 
+    fprintf(fp, "set ylabel font 'Arial,16'\n"); 
+    fprintf(fp, "set key font 'Arial, 14'\n");
+    fprintf(fp, "set tics font 'Arial, 12'\n");
 
-	for (i=2; i<N-2; i++) {
-		g[i] = h[i] / (b[i] - h[i-1] * g[i-1]);
-	}
+    char buf[200];
+    sprintf(buf, "plot (%lf*x+%lf) linecolor black title 'least square'", a, b);
+    strcat(buf, ", '-' with points pt 7 linecolor black title 'measured data'\n");
+    fprintf(fp, buf);
 
-	u[1] = d[1] / b[1];
+    int i;
+    for(int i=0; i<N; i++) {
+        fprintf(fp,"%f\t%f\n", x[i], y[i]);    // データの書き込み
+    }  
 
-	for(i=2; i<N-1; i++) {
-		u[i] = (d[i]-h[i-1] * u[i-1]) / (b[i] - h[i-1] * g[i-1]);
-	}
-	
-	if(idx > 1) {
-		k = idx;
-	} else {
-		k = 1;
-	}
+    fprintf(fp, "e\n");
 
-	r[0]   = 0.0;
-	r[N-1] = 0.0;
-	r[N-2] = u[N-2];
-	
-	for (i=N-3; i>=k; i--) {
-		r[i] = u[i] - g[i] * r[i+1];
-	}
-
-	double dx = x - pnt[idx].x;
-	double q = (pnt[idx+1].y - pnt[idx].y) / h[idx] - h[idx] * (r[idx+1] + 2.0 * r[idx]) / 3.0;
-	double s = (r[idx+1] - r[idx]) / (3.0 * h[idx]);
-	
-	return pnt[idx].y + dx * (q + dx * (r[idx]  + s * dx));
+    fflush(fp);
+    _pclose(fp);
 }
 
+double sum(double a[], int N)
+{
+    double sum = 0;
+	for(int i=0;i<N;i++){
+        sum += a[i];
+    }
+    return sum;
+}
+
+double inner_product(double a[],double b[],int N)
+{
+	double ip = 0;
+    for(int i=0;i<N;i++){
+        ip += a[i] * b[i];
+    }
+    return ip;
+}
 
 int main(void)
-{
-    FILE *fp;
-    char filename[] = "export.csv"; // 出力するファイルの名前を決める
-    fp = fopen(filename,"w");
+{ 
+    const int N = 10;
+    double x[N]={0, 1, 2, 3, 4, 5,  6,  7,  8, 9};	// 数値はランダム
+    double y[N]={0, 1, 1, 2, 3, 5, 8, 13, 21, 34};
     
-	Point2D points[N] =
-			{{-5.0, -4.0},
-			 {-4.0, -1.0},
-			 { 0.0, 0.0},
-			 { 4.0, 2.0},
-			 { 5.0, 3.0} }; // ここには好きな数値を入れる
-    for(int i=0;i<=600;i++){
-        float x = 0.01 * i - 3.0;
-        fprintf( fp,"%f , %f\n",x,spline(points, x));
-    }
-    fclose( fp );
+    double a = 1;
+    double b = 1;
 
-    printf( "Output %s end\n", filename );
-	
-	return 0;
+    double x_square[N];
+    for(int i=0;i<N;i++){
+        xsquare[i] = x[i]*x[i];
+    }
+
+    double xandy = sum(x,N)*sum(y,N);
+    double bunbo = sum(x,N)*sum(x,N)-N*sum(xsquare,N);
+
+    a = (xandy - N*inner_product(x,y,N))/bunbo;
+    b = (inner_product(x,y,N)*sum(x,N)-sum(xsquare,N)*sum(y,N))/bunbo;
+
+    draw_graph(x, y, N, a, b);
+
+    return 0;
 }
